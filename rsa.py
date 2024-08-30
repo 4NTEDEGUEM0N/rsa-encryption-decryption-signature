@@ -2,7 +2,7 @@ import hashlib
 import base64
 import random
 import math
-
+import argparse
 
 def is_prime(n, k=10):
     if n <= 1:
@@ -161,27 +161,41 @@ def verify_file_signature(file_path, signature_path, public_key):
 
 # =-=-=-=-=-==--==-=-=-
 
+def main():
+    
+    parser = argparse.ArgumentParser(description="Encrypt, decrypt and sing a file using RSA")
+    
+    parser.add_argument("-in_file", type=str, required=True, help="Input file to be processed")
+    
+    args = parser.parse_args()
+    
+    file_path = args.in_file
+    encrypted_file = file_path + ".encrypted"
+    decrypted_file = file_path + ".decrypted"
+    signature_file = file_path + ".signature"
 
-public_key, private_key = generate_keys()
-print("Chave Pública:", public_key)
-print()
-print("Chave Privada:", private_key)
-print()
+    public_key, private_key = generate_keys()
+    print("Chave Pública:", public_key)
+    print()
+    print("Chave Privada:", private_key)
+    print()
 
 
-file_path = "plaintext.txt"
-encrypted_file = "plaintext_encrypted.txt"
-rsa_encrypt_file_base64(file_path, encrypted_file, public_key)
-print(f"Arquivo {file_path} cifrado e salvo em {encrypted_file}")
+    rsa_encrypt_file_base64(file_path, encrypted_file, public_key)
+    print(f"Arquivo {file_path} cifrado e salvo em {encrypted_file}")
 
-decrypted_file = "plaintext_decrypted.txt"
-rsa_decrypt_file_base64(encrypted_file, decrypted_file, private_key)
-print(f"Arquivo {encrypted_file} decifrado e salvo em {decrypted_file}")
+    rsa_decrypt_file_base64(encrypted_file, decrypted_file, private_key)
+    print(f"Arquivo {encrypted_file} decifrado e salvo em {decrypted_file}")
 
 
-signature = sign_file(file_path, private_key)
-save_signature(signature, "plaintext.signature")
-print("Assinatura salva em plaintext.signature")
+    signature = sign_file(file_path, private_key)
+    save_signature(signature, signature_file)
+    print("Assinatura salva em ", signature_file)
 
-is_valid = verify_file_signature(file_path, "plaintext.signature", public_key)
-print("Assinatura válida:", is_valid)
+    is_valid = verify_file_signature(file_path, signature_file, public_key)
+    print("Assinatura válida:", is_valid)
+
+
+if __name__ == '__main__':
+    main()
+
