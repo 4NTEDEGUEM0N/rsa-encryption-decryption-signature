@@ -65,7 +65,6 @@ def generate_keys():
     from cryptography.hazmat.primitives import serialization
 
     def generate_private_key_pem(p, q, e, d, n, output_file='private_key.pem'):
-        # Reconstruir o objeto RSA private key
         private_key = rsa.RSAPrivateNumbers(
             p=p,
             q=q,
@@ -76,29 +75,24 @@ def generate_keys():
             public_numbers=rsa.RSAPublicNumbers(e, n)
         ).private_key()
         
-        # Serializar a chave privada em formato PEM
         pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption()
         )
         
-        # Escrever a chave no arquivo
         with open(output_file, 'wb') as f:
             f.write(pem)
 
 
     def generate_public_key_pem(e, n, output_file='public_key.pem'):
-        # Criar o objeto RSA public key
         public_key = rsa.RSAPublicNumbers(e, n).public_key()
         
-        # Serializar a chave pública em formato PEM
         pem = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
         
-        # Escrever a chave no arquivo
         with open(output_file, 'wb') as f:
             f.write(pem)
 
@@ -113,11 +107,9 @@ def decode_private_key_pem(private_key):
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
     
-    # Lê a chave privada do arquivo PEM
     with open(private_key, "rb") as f:
         chave_privada_pem = f.read()
 
-    # Carrega a chave privada
     chave_privada = serialization.load_pem_private_key(
         chave_privada_pem,
         password=None
@@ -126,7 +118,6 @@ def decode_private_key_pem(private_key):
     if not isinstance(chave_privada, rsa.RSAPrivateKey):
         raise ValueError("A chave privada não é do tipo RSA")
 
-    # Obtém os parâmetros da chave privada
     private_numbers = chave_privada.private_numbers()
     d = private_numbers.d
     n = private_numbers.public_numbers.n
@@ -138,17 +129,14 @@ def decode_public_key_pem(public_key):
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
     
-    # Lê a chave pública do arquivo PEM
     with open(public_key, "rb") as f:
         chave_publica_pem = f.read()
 
-    # Carrega a chave pública
     chave_publica = serialization.load_pem_public_key(chave_publica_pem)
 
     if not isinstance(chave_publica, rsa.RSAPublicKey):
         raise ValueError("A chave pública não é do tipo RSA")
 
-    # Obtém os parâmetros da chave pública
     public_numbers = chave_publica.public_numbers()
     e = public_numbers.e
     n = public_numbers.n
