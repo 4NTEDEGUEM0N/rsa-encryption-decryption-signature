@@ -1,5 +1,8 @@
 # rsa-encryption-decryption-signature
-
+### Requirements
+``` sh
+pip install cryptography
+```
 
 ### Generate keys
 ``` sh
