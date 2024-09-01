@@ -64,44 +64,38 @@ def generate_keys():
     from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.primitives import serialization
 
-    def generate_private_key_pem(p, q, e, d, n, output_file='private_key.pem'):
-        private_key = rsa.RSAPrivateNumbers(
-            p=p,
-            q=q,
-            d=d,
-            dmp1=(d % (p - 1)),
-            dmq1=(d % (q - 1)),
-            iqmp=(pow(q, -1, p)),
-            public_numbers=rsa.RSAPublicNumbers(e, n)
-        ).private_key()
-        
-        pem = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
-        )
-        
-        with open(output_file, 'wb') as f:
-            f.write(pem)
+    private_key = rsa.RSAPrivateNumbers(
+        p=p,
+        q=q,
+        d=d,
+        dmp1=(d % (p - 1)),
+        dmq1=(d % (q - 1)),
+        iqmp=(pow(q, -1, p)),
+        public_numbers=rsa.RSAPublicNumbers(e, n)
+    ).private_key()
+    
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    
+    with open('private_key.pem', 'wb') as f:
+        f.write(pem)
 
 
-    def generate_public_key_pem(e, n, output_file='public_key.pem'):
-        public_key = rsa.RSAPublicNumbers(e, n).public_key()
-        
-        pem = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-        
-        with open(output_file, 'wb') as f:
-            f.write(pem)
+    public_key = rsa.RSAPublicNumbers(e, n).public_key()
+    
+    pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    
+    with open('public_key.pem', 'wb') as f:
+        f.write(pem)
 
     print("Chaves salvas em private_key.pem e public_key.pem")
 
-    public_key = (e, n)
-    private_key = (d, n)
-
-    return public_key, private_key
 
 def decode_private_key_pem(private_key):
     from cryptography.hazmat.primitives import serialization
