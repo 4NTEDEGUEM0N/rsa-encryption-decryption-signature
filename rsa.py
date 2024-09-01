@@ -138,6 +138,20 @@ def decode_public_key_pem(public_key):
     return (e, n)
 
 
+def decode_key_pem(key):
+    with open(key, 'r') as file:
+        chave = file.read()
+    
+    if "PUBLIC KEY" in chave:
+        key = decode_public_key_pem(key)
+    elif "PRIVATE KEY" in chave:
+        key = decode_private_key_pem(key)
+    else:
+        raise ValueError("Chave Inválida")
+    
+    return key
+
+
 def encode_base64(data):
     return base64.b64encode(data).decode('utf-8')
 
@@ -164,14 +178,14 @@ def pkcs1_v1_5_unpad(plaintext):
     return plaintext[plaintext.index(b'\x00') + 1:]
 
 
-def rsa_encrypt_file_base64(input_file_path, output_file_path, public_key):
+def rsa_encrypt_file_base64(input_file_path, output_file_path, key):
     with open(input_file_path, 'rb') as file:
         file_data = file.read()
     key_size = 256
     file_data = pkcs1_v1_5_pad(file_data, key_size)
 
     message_int = int.from_bytes(file_data, 'big')
-    cipher_int = pow(message_int, public_key[0], public_key[1])
+    cipher_int = pow(message_int, key[0], key[1])
 
     cipher_bytes = cipher_int.to_bytes(
         (math.ceil(cipher_int.bit_length() / 8)), 'big')
@@ -181,14 +195,14 @@ def rsa_encrypt_file_base64(input_file_path, output_file_path, public_key):
         file.write(cipher_b64)
 
 
-def rsa_decrypt_file_base64(input_file_path, output_file_path, private_key):
+def rsa_decrypt_file_base64(input_file_path, output_file_path, key):
     with open(input_file_path, 'r') as file:
         cipher_b64 = file.read()
 
     cipher_bytes = decode_base64(cipher_b64)
     cipher_int = int.from_bytes(cipher_bytes, 'big')
 
-    message_int = pow(cipher_int, private_key[0], private_key[1])
+    message_int = pow(cipher_int, key[0], key[1])
 
     message = message_int.to_bytes(
         math.ceil(message_int.bit_length() / 8), 'big')
@@ -207,27 +221,20 @@ def sha3_hash_file(file_path):
     return hash_object.digest()
 
 
-def sign_file(file_path, private_key):
+def sign_file(file_path, key):
     file_hash = sha3_hash_file(file_path)
-    hash_int = int.from_bytes(file_hash, 'big')
-    signature = pow(hash_int, private_key[0], private_key[1])
-    return signature
+    with open(file_path + ".signature", 'w') as file:
+        file.write(encode_base64(file_hash))
+    encrypted_file = file_path + ".signature"
+    signature = rsa_encrypt_file_base64(encrypted_file, encrypted_file, key)
 
-
-def save_signature(signature, output_path):
-    signature_b64 = encode_base64(signature.to_bytes(
-        (signature.bit_length() + 7) // 8, 'big'))
-    with open(output_path, 'w') as sig_file:
-        sig_file.write(signature_b64)
-
-
-def verify_file_signature(file_path, signature_path, public_key):
-    with open(signature_path, 'r') as sig_file:
-        signature_b64 = sig_file.read()
-
-    signature = int.from_bytes(decode_base64(signature_b64), 'big')
-    hash_from_signature = pow(signature, public_key[0], public_key[1])
-    original_hash = int.from_bytes(sha3_hash_file(file_path), 'big')
+def verify_file_signature(file_path, signature_path, key):
+    decrypted_file = signature_path + ".decrypted"
+    rsa_decrypt_file_base64(signature_path, decrypted_file, key)
+    with open(decrypted_file, "r") as file:
+        hash_from_signature = file.read()
+    
+    original_hash = encode_base64(sha3_hash_file(file_path))
 
     return hash_from_signature == original_hash
 
@@ -243,38 +250,29 @@ def main():
     parser.add_argument("-key", type=str, required=False, help="Key file to be used")
     
     args = parser.parse_args()
-    
     operation = args.operation
+    in_file = args.in_file
+    signature_file = args.sign_file
+    key = args.key
+    if key:
+        key = decode_key_pem(key)
+    
+    
     if operation == "gen":
         generate_keys()
     elif operation == "enc":
-        file_path = args.in_file
-        encrypted_file = file_path + ".encrypted"
-        public_key = args.key
-        public_key = decode_public_key_pem(public_key)
-        rsa_encrypt_file_base64(file_path, encrypted_file, public_key)
-        print(f"Arquivo {file_path} cifrado e salvo em {encrypted_file}")
+        encrypted_file = in_file + ".encrypted"
+        rsa_encrypt_file_base64(in_file, encrypted_file, key)
+        print(f"Arquivo {in_file} cifrado e salvo em {encrypted_file}")
     elif operation == "dec":
-        encrypted_file = args.in_file
-        decrypted_file = encrypted_file + ".decrypted"
-        private_key = args.key
-        private_key = decode_private_key_pem(private_key)
-        rsa_decrypt_file_base64(encrypted_file, decrypted_file, private_key)
-        print(f"Arquivo {encrypted_file} decifrado e salvo em {decrypted_file}")
+        decrypted_file = in_file + ".decrypted"
+        rsa_decrypt_file_base64(in_file, decrypted_file, key)
+        print(f"Arquivo {in_file} decifrado e salvo em {decrypted_file}")
     elif operation == "sign":
-        file_path = args.in_file
-        signature_file = file_path + ".signature"
-        private_key = args.key
-        private_key = decode_private_key_pem(private_key)
-        signature = sign_file(file_path, private_key)
-        save_signature(signature, signature_file)
-        print("Assinatura salva em ", signature_file)
+        signature = sign_file(in_file, key)
+        print("Assinatura salva em ", in_file + ".signature")
     elif operation == "verify":
-        file_path = args.in_file
-        signature_file = args.sign_file
-        public_key = args.key
-        public_key = decode_public_key_pem(public_key)
-        is_valid = verify_file_signature(file_path, signature_file, public_key)
+        is_valid = verify_file_signature(in_file, signature_file, key)
         print("Assinatura válida:", is_valid)
     else:
         print("Operação inválida")
